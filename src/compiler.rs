@@ -102,7 +102,7 @@ fn compile_expr(
             if env.contains_key(id) {
                 vec![Instr::IMov(
                     Arg::Reg(Reg::Rax),
-                    Arg::RegOffset(Reg::Rsp, - *env.get(id).unwrap()),
+                    Arg::Mem(maddr_bd(Reg::Rsp, -*env.get(id).unwrap())),
                 )]
             } else {
                 panic!("Unbound variable identifier {}", id)
@@ -115,7 +115,7 @@ fn compile_expr(
                 let stack_offset = (si + i as i64) * 8;
                 instrs.append(&mut compile_expr(e, si + 1, &new_env, brake, l));
                 instrs.push(Instr::IMov(
-                    Arg::RegOffset(Reg::Rsp, -stack_offset),
+                    Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                     Arg::Reg(Reg::Rax),
                 ));
                 new_env.insert(id.to_string(), stack_offset);
@@ -172,17 +172,23 @@ fn compile_expr(
                     let mut instrs = compile_expr(e1, si, env, brake, l);
                     // Save the result in the current stack index
                     let stack_offset = si * 8;
-                    instrs.push(Instr::IMov(Arg::RegOffset(Reg::Rsp, -stack_offset), Arg::Reg(Reg::Rax)));
+                    instrs.push(Instr::IMov(
+                        Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
+                        Arg::Reg(Reg::Rax),
+                    ));
                     // Then evaluate e2
                     instrs.append(&mut compile_expr(e2, si + 1, env, brake, l));
                     // Copy the result of e1 to rcx
-                    instrs.push(Instr::IMov(Arg::Reg(Reg::Rcx), Arg::RegOffset(Reg::Rsp, -stack_offset)));
+                    instrs.push(Instr::IMov(
+                        Arg::Reg(Reg::Rcx),
+                        Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
+                    ));
                     // Error if e1 and e2 are of different types
                     instrs.append(&mut error_rax_rcx_diff_type());
                     // If they are of the same type, do a regular comparison
                     // and set the result accordingly
                     instrs.append(&mut vec![
-                        Instr::ICmp(Arg::Reg(Reg::Rax), Arg::RegOffset(Reg::Rsp, -stack_offset)),
+                        Instr::ICmp(Arg::Reg(Reg::Rax), Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset))),
                         Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
                         Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
                         Instr::ICmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
@@ -203,7 +209,10 @@ fn compile_expr(
                     instrs.append(&mut error_rax_not_num());
                     // Otherwise, save result in the current stack index
                     let stack_offset = si * 8;
-                    instrs.push(Instr::IMov(Arg::RegOffset(Reg::Rsp, -stack_offset), Arg::Reg(Reg::Rax)));
+                    instrs.push(Instr::IMov(
+                        Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)), 
+                        Arg::Reg(Reg::Rax),
+                    ));
                     // Evaluate e2
                     instrs.append(&mut compile_expr(e2, si + 1, env, brake, l));
                     // error if the result is not a number
@@ -213,20 +222,20 @@ fn compile_expr(
                         Op2::Plus => {
                             instrs.push(Instr::IAdd(
                                 Arg::Reg(Reg::Rax),
-                                Arg::RegOffset(Reg::Rsp, -stack_offset),
+                                Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                             ));
                             instrs.append(&mut error_overflow());
                         }
                         Op2::Minus => {
                             // The expected order is the opposite than the sub instruction
                             instrs.push(Instr::ISub(
-                                Arg::RegOffset(Reg::Rsp, -stack_offset),
+                                Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                                 Arg::Reg(Reg::Rax),
                             ));
                             instrs.append(&mut error_overflow());
                             instrs.push(Instr::IMov(
                                 Arg::Reg(Reg::Rax),
-                                Arg::RegOffset(Reg::Rsp, -stack_offset),
+                                Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                             ));
                         }
                         Op2::Times => {
@@ -235,7 +244,7 @@ fn compile_expr(
                                 Instr::ISar(Arg::Reg(Reg::Rax), Arg::Imm(1)),
                                 Instr::IImul(
                                     Arg::Reg(Reg::Rax),
-                                    Arg::RegOffset(Reg::Rsp, -stack_offset),
+                                    Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                                 ),
                             ]);
                             instrs.append(&mut error_overflow());
@@ -246,7 +255,7 @@ fn compile_expr(
                                 // cmp and set the result to rax accordingly
                                 // This is the right order for the comparison
                                 Instr::ICmp(
-                                    Arg::RegOffset(Reg::Rsp, -stack_offset),
+                                    Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                                     Arg::Reg(Reg::Rax),
                                 ),
                                 Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
@@ -309,7 +318,7 @@ fn compile_expr(
                 let id_offset = env.get(id).unwrap();
                 let mut instrs = compile_expr(e, si, env, brake, l);
                 instrs.push(Instr::IMov(
-                    Arg::RegOffset(Reg::Rsp, - *id_offset),
+                    Arg::Mem(maddr_bd(Reg::Rsp, -*id_offset)),
                     Arg::Reg(Reg::Rax),
                 ));
                 instrs
@@ -330,7 +339,7 @@ fn compile_expr(
             let stack_offset = index * 8;
             instrs.append(&mut vec![
                 // Save rdi before the call
-                Instr::IMov(Arg::RegOffset(Reg::Rsp, -stack_offset), Arg::Reg(Reg::Rdi)),
+                Instr::IMov(Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)), Arg::Reg(Reg::Rdi)),
                 // Set the argument (rdi) to the value we want to print (rax)
                 Instr::IMov(Arg::Reg(Reg::Rdi), Arg::Reg(Reg::Rax)),
                 // Move rsp to point to the top of the stack
@@ -340,7 +349,7 @@ fn compile_expr(
                 // Restore rsp
                 Instr::IAdd(Arg::Reg(Reg::Rsp), Arg::Imm(stack_offset)),
                 // and restore rdi
-                Instr::IMov(Arg::Reg(Reg::Rdi), Arg::RegOffset(Reg::Rsp, -stack_offset)),
+                Instr::IMov(Arg::Reg(Reg::Rdi), Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset))),
             ]);
             instrs
         }
@@ -353,7 +362,8 @@ fn compile_expr(
                 instrs.append(&mut compile_expr(expr, current_si, env, brake, l));
                 // Save the result in the current stack index
                 instrs.push(Instr::IMov(
-                    Arg::RegOffset(Reg::Rsp, -current_si * 8),
+                    // Arg::RegOffset(Reg::Rsp, -current_si * 8),
+                    Arg::Mem(maddr_bd(Reg::Rsp, -current_si * 8)),
                     Arg::Reg(Reg::Rax),
                 ));
             }
@@ -362,7 +372,7 @@ fn compile_expr(
             // Set r15 (next new heap location) to the size of the tuple
             // The size need not to be in the internal representation format (shifted)
             // however, this will make checking out of bounds easier
-            instrs.push(Instr::IMov(Arg::RegOffset(Reg::R15, 0), Arg::Reg(Reg::Rbx)));
+            instrs.push(Instr::IMov(Arg::Mem(maddr_b(Reg::R15)), Arg::Reg(Reg::Rbx)));
             // Move values from the stack to the heap
             for i in 0..size {
                 let current_si = si + i as i64;
@@ -370,11 +380,12 @@ fn compile_expr(
                 // Move the value from the stack to rax
                 instrs.push(Instr::IMov(
                     Arg::Reg(Reg::Rax),
-                    Arg::RegOffset(Reg::Rsp, -current_si * 8),
+                    Arg::Mem(maddr_bd(Reg::Rsp, -current_si * 8)),
                 ));
                 // Move the value from rax to the heap
                 instrs.push(Instr::IMov(
-                    Arg::RegOffset(Reg::R15, (i as i64 + 1) * 8),
+                    // Arg::RegOffset(Reg::R15, (i as i64 + 1) * 8),
+                    Arg::Mem(maddr_bd(Reg::R15, (i as i64 + 1) * 8)),
                     Arg::Reg(Reg::Rax),
                 ));
             }
@@ -392,7 +403,10 @@ fn compile_expr(
             // error if idx is not a number
             instrs.append(&mut error_rax_not_num());
             // save the result in the current stack index
-            instrs.push(Instr::IMov(Arg::RegOffset(Reg::Rsp, -si * 8), Arg::Reg(Reg::Rax)));
+            instrs.push(Instr::IMov(
+                Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
+                Arg::Reg(Reg::Rax),
+            ));
             // evaluate the tuple
             instrs.append(&mut compile_expr(e, si + 1, env, brake, l));
             // error if the value is not a tuple
@@ -401,12 +415,19 @@ fn compile_expr(
             instrs.push(Instr::ISub(Arg::Reg(Reg::Rax), Arg::Imm(1)));
             // TODO: check if the index is out of bounds
             // get the index to rbx
-            instrs.push(Instr::IMov(Arg::Reg(Reg::Rbx), Arg::RegOffset(Reg::Rsp, -si * 8)));
+            instrs.push(Instr::IMov(
+                Arg::Reg(Reg::Rbx),
+                Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
+            ));
             // get the correct index by shifting it to the right and adding 1
             instrs.push(Instr::ISar(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
             instrs.push(Instr::IAdd(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
             // use this index to index the tuple in the heap
-            instrs.push(Instr::IMov(Arg::Reg(Reg::Rax), Arg::RegAddressing(Reg::Rax, Reg::Rbx, 8)));
+            // instrs.push(Instr::IMov(Arg::Reg(Reg::Rax), Arg::RegAddressing(Reg::Rax, Reg::Rbx, 8)));
+            instrs.push(Instr::IMov(
+                Arg::Reg(Reg::Rax),
+                Arg::Mem(maddr_bisd(Reg::Rax, Reg::Rbx, 8, 0)),
+            ));
             instrs
         }
         Expr::FunCall(fname, args) => {
@@ -423,13 +444,13 @@ fn compile_expr(
                 instrs.append(&mut compile_expr(arg, new_rsp_offset + 1, env, brake, l));
                 // start populating the args from the new rsp offset up
                 instrs.push(Instr::IMov(
-                    Arg::RegOffset(Reg::Rsp, (i as i64 - new_rsp_offset) * 8),
+                    Arg::Mem(maddr_bd(Reg::Rsp, (i as i64 - new_rsp_offset) * 8)),
                     Arg::Reg(Reg::Rax),
                 ));
             };
             // Save rdi to the actual stack index
             instrs.push(Instr::IMov(
-                Arg::RegOffset(Reg::Rsp, -si * 8),
+                Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
                 Arg::Reg(Reg::Rdi),
             ));
             // Move rsp to point to the top of the stack
@@ -441,7 +462,7 @@ fn compile_expr(
             // and restore rdi
             instrs.push(Instr::IMov(
                 Arg::Reg(Reg::Rdi),
-                Arg::RegOffset(Reg::Rsp, -si * 8),
+                Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
             ));
             instrs
         }

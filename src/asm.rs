@@ -1,3 +1,5 @@
+// types
+
 #[derive(Debug)]
 pub enum Reg {
     Rax,
@@ -25,9 +27,7 @@ pub enum MemAddr {
 pub enum Arg {
     Reg(Reg),
     Imm(i64),
-    RegOffset(Reg, i64),
-    Label(String),
-    RegAddressing(Reg, Reg, i64),
+    Mem(MemAddr),
 }
 
 #[derive(Debug)]
@@ -56,6 +56,20 @@ pub enum Instr {
     IRet,
 }
 
+// impls
+
+pub fn maddr_b(base: Reg) -> MemAddr {
+    MemAddr::MemAddr { base, index: None, scale: None, disp: 0 }
+}
+
+pub fn maddr_bd(base: Reg, disp: i64) -> MemAddr {
+    MemAddr::MemAddr { base, index: None, scale: None, disp }
+}
+
+pub fn maddr_bisd(base: Reg, index: Reg, scale: i64, disp: i64) -> MemAddr {
+    MemAddr::MemAddr { base, index: Some(index), scale: Some(scale), disp }
+}
+
 fn reg_to_string(r: &Reg) -> String {
     match r {
         Reg::Rax => "rax".to_string(),
@@ -74,17 +88,22 @@ fn arg_to_string(v: &Arg) -> String {
     match v {
         Arg::Reg(r) => reg_to_string(r),
         Arg::Imm(i) => i.to_string(),
-        Arg::RegOffset(r, i) => {
-            if *i == 0 {
-                return format!("[{}]", reg_to_string(r));
-            } else if *i < 0 {
-                return format!("[{} - {}]", reg_to_string(r), -i);
-            } else {
-                return format!("[{} + {}]", reg_to_string(r), i);
+        Arg::Mem(MemAddr::MemAddr { base, index, scale, disp }) => {
+            let mut s = format!("[{}", reg_to_string(base));
+            if let Some(index) = index {
+                let mut n = 1;
+                if let Some(scale) = scale {
+                    n = *scale;
+                }
+                s = format!("{} + {} * {}", s, reg_to_string(index), n);
             }
+            if *disp > 0 {
+                s = format!("{} + {}", s, disp);
+            } else if *disp < 0 {
+                s = format!("{} - {}", s, -disp);
+            }
+            format!("{}]", s)
         }
-        Arg::Label(l) => l.to_string(),
-        Arg::RegAddressing(base, index, scale) => format!("[{} + {} * {}]", reg_to_string(base), reg_to_string(index), scale),
     }
 }
 
