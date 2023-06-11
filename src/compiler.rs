@@ -1,6 +1,7 @@
 use im::HashMap;
 
 use crate::syntax::*;
+use crate::asm::*;
 
 fn reg_to_str(r: &Reg) -> String {
     match r {

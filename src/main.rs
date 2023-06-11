@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 pub mod syntax;
+pub mod asm;
 pub mod parser;
 pub mod compiler;
 
