@@ -3,65 +3,6 @@ use im::HashMap;
 use crate::syntax::*;
 use crate::asm::*;
 
-fn reg_to_str(r: &Reg) -> String {
-    match r {
-        Reg::Rax => "rax".to_string(),
-        Reg::Rbx => "rbx".to_string(),
-        Reg::Rcx => "rcx".to_string(),
-        Reg::Rdx => "rdx".to_string(),
-        Reg::Rsp => "rsp".to_string(),
-        Reg::Rbp => "rbp".to_string(),
-        Reg::Rsi => "rsi".to_string(),
-        Reg::Rdi => "rdi".to_string(),
-        Reg::R15 => "r15".to_string(),
-    }
-}
-
-fn val_to_str(v: &Arg) -> String {
-    match v {
-        Arg::Reg(r) => reg_to_str(r),
-        Arg::Imm(i) => i.to_string(),
-        Arg::RegOffset(r, i) => {
-            if *i == 0 {
-                return format!("[{}]", reg_to_str(r));
-            } else if *i < 0 {
-                return format!("[{} - {}]", reg_to_str(r), -i);
-            } else {
-                return format!("[{} + {}]", reg_to_str(r), i);
-            }
-        }
-        Arg::Label(l) => l.to_string(),
-        Arg::RegAddressing(base, index, scale) => format!("[{} + {} * {}]", reg_to_str(base), reg_to_str(index), scale),
-    }
-}
-
-fn instr_to_str(i: &Instr) -> String {
-    match i {
-        Instr::Label(l) => format!("{}:", l),
-        Instr::IMov(v1, v2) => format!("mov {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IAdd(v1, v2) => format!("add {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ISub(v1, v2) => format!("sub {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IImul(v1, v2) => format!("imul {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ITest(v1, v2) => format!("test {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ICmove(v1, v2) => format!("cmove {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ISar(v1, v2) => format!("sar {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IXor(v1, v2) => format!("xor {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IAnd(v1, v2) => format!("and {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IJne(v) => format!("jne {}", val_to_str(v)),
-        Instr::ICmp(v1, v2) => format!("cmp {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IOr(v1, v2) => format!("or {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ICmovl(v1, v2) => format!("cmovl {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ICmovle(v1, v2) => format!("cmovle {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ICmovg(v1, v2) => format!("cmovg {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::ICmovge(v1, v2) => format!("cmovge {}, {}", val_to_str(v1), val_to_str(v2)),
-        Instr::IJe(v) => format!("je {}", val_to_str(v)),
-        Instr::IJmp(v) => format!("jmp {}", val_to_str(v)),
-        Instr::IJo(v) => format!("jo {}", val_to_str(v)),
-        Instr::ICall(v) => format!("call {}", v),
-        Instr::IRet => "ret".to_string(),
-    }
-}
-
 // Returns the internal representation of constant values
 fn repr(e: &Expr) -> i64 {
     match e {
@@ -103,7 +44,7 @@ fn error_rax_rcx_diff_type() -> Vec<Instr> {
         // and test if 1 bit is set (1st bits are equal)
         Instr::ITest(Arg::Reg(Reg::Rcx), Arg::Imm(1)),
         // If not, jump to error handler
-        Instr::IJne(Arg::Label("snek_error_handler".to_string())),
+        Instr::IJne("snek_error_handler".to_string()),
     ]
 }
 
@@ -112,7 +53,7 @@ fn error_rax_not_num() -> Vec<Instr> {
     vec![
         Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(2)),
         Instr::ITest(Arg::Reg(Reg::Rax), Arg::Imm(1)),
-        Instr::IJne(Arg::Label("snek_error_handler".to_string())),
+        Instr::IJne("snek_error_handler".to_string()),
     ]
 }
 
@@ -120,7 +61,7 @@ fn error_rax_not_num() -> Vec<Instr> {
 fn error_overflow() -> Vec<Instr> {
     vec![
         Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(3)),
-        Instr::IJo(Arg::Label("snek_error_handler".to_string())),
+        Instr::IJo("snek_error_handler".to_string()),
     ]
 }
 // Instructions that error with code 4 if the value in RAX is not a tuple
@@ -134,7 +75,7 @@ fn error_rax_not_tuple() -> Vec<Instr> {
         Instr::ICmp(Arg::Reg(Reg::Rcx), Arg::Imm(1)),
         // If not, jump to error handler with code 4
         Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(4)),
-        Instr::IJne(Arg::Label("snek_error_handler".to_string())),
+        Instr::IJne("snek_error_handler".to_string()),
     ]
 }
 
@@ -335,10 +276,10 @@ fn compile_expr(
             // TODO: We might want to check that the result is a boolean
             // If result of cond is false, jump to else
             instrs.push(Instr::ICmp(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())));
-            instrs.push(Instr::IJe(Arg::Label(else_label.clone())));
+            instrs.push(Instr::IJe(else_label.clone()));
             // We execute thn instructions and jump to end
             instrs.append(&mut compile_expr(thn, si, env, brake, l));
-            instrs.push(Instr::IJmp(Arg::Label(end_label.clone())));
+            instrs.push(Instr::IJmp(end_label.clone()));
             // We define the else label, no need to jump after
             instrs.push(Instr::Label(else_label.clone()));
             instrs.append(&mut compile_expr(els, si, env, brake, l));
@@ -350,14 +291,14 @@ fn compile_expr(
             let end_label = new_label(l, "loopend");
             let mut instrs = vec![Instr::Label(start_label.clone())];
             instrs.append(&mut compile_expr(body, si, env, &end_label, l));
-            instrs.push(Instr::IJmp(Arg::Label(start_label.clone())));
+            instrs.push(Instr::IJmp(start_label.clone()));
             instrs.push(Instr::Label(end_label.clone()));
             instrs
         }
         Expr::Break(e) => {
             if !brake.is_empty() {
                 let mut instrs = compile_expr(e, si, env, brake, l);
-                instrs.push(Instr::IJmp(Arg::Label(brake.clone())));
+                instrs.push(Instr::IJmp(brake.clone()));
                 instrs
             } else {
                 panic!("break outside of loop: {:?}", e);
@@ -537,7 +478,7 @@ fn compile_program(p: &Program) -> (Vec<Instr>, Vec<Instr>) {
 fn instrs_to_asm(instrs: Vec<Instr>) -> String {
     instrs
         .iter()
-        .map(|i| instr_to_str(i))
+        .map(|i| instr_to_string(i))
         .collect::<Vec<String>>()
         .join("\n")
 }
