@@ -2,7 +2,7 @@ use im::HashSet;
 use sexp::Atom::*;
 use sexp::*;
 
-use crate::types::*;
+use crate::syntax::*;
 
 const RESERVED_WORDS: &[&str] = &[
     "true", "false", "input", "let", "set!", "if", "block", "loop", "break", "print", "fun", "tuple", "index",

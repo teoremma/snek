@@ -2,7 +2,7 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
-pub mod types;
+pub mod syntax;
 pub mod parser;
 pub mod compiler;
 
