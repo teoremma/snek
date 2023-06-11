@@ -27,9 +27,9 @@ fn new_label(l: &mut i64, s: &str) -> String {
 fn error_handler() -> Vec<Instr> {
     vec![
         Instr::Label("snek_error_handler".to_string()),
-        Instr::IMov(Arg::Reg(Reg::Rdi), Arg::Reg(Reg::Rbx)),
+        Instr::Mov(Arg::Reg(Reg::Rdi), Arg::Reg(Reg::Rbx)),
         // TODO: is this call or jump?
-        Instr::ICall("snek_error".to_string()),
+        Instr::Call("snek_error".to_string()),
     ]
 }
 
@@ -38,44 +38,44 @@ fn error_handler() -> Vec<Instr> {
 fn error_rax_rcx_diff_type() -> Vec<Instr> {
     vec![
         // Set error code to 1
-        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(1)),
+        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(1)),
         // Get the matching bits of RAX and RCX
-        Instr::IXor(Arg::Reg(Reg::Rcx), Arg::Reg(Reg::Rax)),
+        Instr::Xor(Arg::Reg(Reg::Rcx), Arg::Reg(Reg::Rax)),
         // and test if 1 bit is set (1st bits are equal)
-        Instr::ITest(Arg::Reg(Reg::Rcx), Arg::Imm(1)),
+        Instr::Test(Arg::Reg(Reg::Rcx), Arg::Imm(1)),
         // If not, jump to error handler
-        Instr::IJne("snek_error_handler".to_string()),
+        Instr::Jne("snek_error_handler".to_string()),
     ]
 }
 
 // Instructions that error with code 2 if the value in RAX is not a number
 fn error_rax_not_num() -> Vec<Instr> {
     vec![
-        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(2)),
-        Instr::ITest(Arg::Reg(Reg::Rax), Arg::Imm(1)),
-        Instr::IJne("snek_error_handler".to_string()),
+        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(2)),
+        Instr::Test(Arg::Reg(Reg::Rax), Arg::Imm(1)),
+        Instr::Jne("snek_error_handler".to_string()),
     ]
 }
 
 // Instructions that error with code 3 if there is an overflow
 fn error_overflow() -> Vec<Instr> {
     vec![
-        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(3)),
-        Instr::IJo("snek_error_handler".to_string()),
+        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(3)),
+        Instr::Jo("snek_error_handler".to_string()),
     ]
 }
 // Instructions that error with code 4 if the value in RAX is not a tuple
 fn error_rax_not_tuple() -> Vec<Instr> {
     vec![
         // Copy the value to rcx
-        Instr::IMov(Arg::Reg(Reg::Rcx), Arg::Reg(Reg::Rax)),
+        Instr::Mov(Arg::Reg(Reg::Rcx), Arg::Reg(Reg::Rax)),
         // get the two least significant bits
-        Instr::IAnd(Arg::Reg(Reg::Rcx), Arg::Imm(3)),
+        Instr::And(Arg::Reg(Reg::Rcx), Arg::Imm(3)),
         // and test if they are 1 (the value is a tuple)
-        Instr::ICmp(Arg::Reg(Reg::Rcx), Arg::Imm(1)),
+        Instr::Cmp(Arg::Reg(Reg::Rcx), Arg::Imm(1)),
         // If not, jump to error handler with code 4
-        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(4)),
-        Instr::IJne("snek_error_handler".to_string()),
+        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(4)),
+        Instr::Jne("snek_error_handler".to_string()),
     ]
 }
 
@@ -90,17 +90,17 @@ fn compile_expr(
     match e {
         Expr::Number(n) => {
             if let (our_n, false) = n.overflowing_mul(2) {
-                vec![Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(our_n))]
+                vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(our_n))]
             } else {
                 panic!("Invalid integer constant: overflow {}", n)
             }
         }
-        Expr::Boolean(true) => vec![Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_true()))],
-        Expr::Boolean(false) => vec![Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false()))],
-        Expr::Id(id) if id == "input" => vec![Instr::IMov(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rdi))],
+        Expr::Boolean(true) => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_true()))],
+        Expr::Boolean(false) => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false()))],
+        Expr::Id(id) if id == "input" => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rdi))],
         Expr::Id(id) => {
             if env.contains_key(id) {
-                vec![Instr::IMov(
+                vec![Instr::Mov(
                     Arg::Reg(Reg::Rax),
                     Arg::Mem(maddr_bd(Reg::Rsp, -*env.get(id).unwrap())),
                 )]
@@ -114,7 +114,7 @@ fn compile_expr(
             for (i, (id, e)) in bindings.into_iter().enumerate() {
                 let stack_offset = (si + i as i64) * 8;
                 instrs.append(&mut compile_expr(e, si + 1, &new_env, brake, l));
-                instrs.push(Instr::IMov(
+                instrs.push(Instr::Mov(
                     Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                     Arg::Reg(Reg::Rax),
                 ));
@@ -134,30 +134,30 @@ fn compile_expr(
             match op {
                 Op1::Add1 => {
                     instrs.append(&mut error_rax_not_num());
-                    instrs.push(Instr::IAdd(Arg::Reg(Reg::Rax), Arg::Imm(2)));
+                    instrs.push(Instr::Add(Arg::Reg(Reg::Rax), Arg::Imm(2)));
                     instrs.append(&mut error_overflow());
                 }
                 Op1::Sub1 => {
                     instrs.append(&mut error_rax_not_num());
-                    instrs.push(Instr::ISub(Arg::Reg(Reg::Rax), Arg::Imm(2)));
+                    instrs.push(Instr::Sub(Arg::Reg(Reg::Rax), Arg::Imm(2)));
                     instrs.append(&mut error_overflow());
                 }
                 Op1::IsNum => {
                     let mut comp_instrs = vec![
                         // Test rax & 1, this will be 0 iff rax represents a number
-                        Instr::ITest(Arg::Reg(Reg::Rax), Arg::Imm(1)),
-                        Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
-                        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
-                        Instr::ICmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
+                        Instr::Test(Arg::Reg(Reg::Rax), Arg::Imm(1)),
+                        Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
+                        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
+                        Instr::Cmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
                     ];
                     instrs.append(&mut comp_instrs);
                 }
                 Op1::IsBool => {
                     let mut comp_instrs = vec![
-                        Instr::ITest(Arg::Reg(Reg::Rax), Arg::Imm(1)),
-                        Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_true())),
-                        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_false())),
-                        Instr::ICmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
+                        Instr::Test(Arg::Reg(Reg::Rax), Arg::Imm(1)),
+                        Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_true())),
+                        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_false())),
+                        Instr::Cmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
                     ];
                     instrs.append(&mut comp_instrs);
                 }
@@ -172,14 +172,14 @@ fn compile_expr(
                     let mut instrs = compile_expr(e1, si, env, brake, l);
                     // Save the result in the current stack index
                     let stack_offset = si * 8;
-                    instrs.push(Instr::IMov(
+                    instrs.push(Instr::Mov(
                         Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                         Arg::Reg(Reg::Rax),
                     ));
                     // Then evaluate e2
                     instrs.append(&mut compile_expr(e2, si + 1, env, brake, l));
                     // Copy the result of e1 to rcx
-                    instrs.push(Instr::IMov(
+                    instrs.push(Instr::Mov(
                         Arg::Reg(Reg::Rcx),
                         Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                     ));
@@ -188,10 +188,10 @@ fn compile_expr(
                     // If they are of the same type, do a regular comparison
                     // and set the result accordingly
                     instrs.append(&mut vec![
-                        Instr::ICmp(Arg::Reg(Reg::Rax), Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset))),
-                        Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
-                        Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
-                        Instr::ICmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
+                        Instr::Cmp(Arg::Reg(Reg::Rax), Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset))),
+                        Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
+                        Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
+                        Instr::Cmove(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx)),
                     ]);
                     instrs
                 }
@@ -209,7 +209,7 @@ fn compile_expr(
                     instrs.append(&mut error_rax_not_num());
                     // Otherwise, save result in the current stack index
                     let stack_offset = si * 8;
-                    instrs.push(Instr::IMov(
+                    instrs.push(Instr::Mov(
                         Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)), 
                         Arg::Reg(Reg::Rax),
                     ));
@@ -220,7 +220,7 @@ fn compile_expr(
                     // the remaining instructions depend on the operator
                     match op {
                         Op2::Plus => {
-                            instrs.push(Instr::IAdd(
+                            instrs.push(Instr::Add(
                                 Arg::Reg(Reg::Rax),
                                 Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                             ));
@@ -228,12 +228,12 @@ fn compile_expr(
                         }
                         Op2::Minus => {
                             // The expected order is the opposite than the sub instruction
-                            instrs.push(Instr::ISub(
+                            instrs.push(Instr::Sub(
                                 Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                                 Arg::Reg(Reg::Rax),
                             ));
                             instrs.append(&mut error_overflow());
-                            instrs.push(Instr::IMov(
+                            instrs.push(Instr::Mov(
                                 Arg::Reg(Reg::Rax),
                                 Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                             ));
@@ -241,8 +241,8 @@ fn compile_expr(
                         Op2::Times => {
                             // We need to divide one of the operands by 2 due to our representation
                             instrs.append(&mut vec![
-                                Instr::ISar(Arg::Reg(Reg::Rax), Arg::Imm(1)),
-                                Instr::IImul(
+                                Instr::Sar(Arg::Reg(Reg::Rax), Arg::Imm(1)),
+                                Instr::Imul(
                                     Arg::Reg(Reg::Rax),
                                     Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                                 ),
@@ -254,22 +254,22 @@ fn compile_expr(
                             instrs.append(&mut vec![
                                 // cmp and set the result to rax accordingly
                                 // This is the right order for the comparison
-                                Instr::ICmp(
+                                Instr::Cmp(
                                     Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)),
                                     Arg::Reg(Reg::Rax),
                                 ),
-                                Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
-                                Instr::IMov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
+                                Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm(repr_true())),
+                                Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())),
                             ]);
                             match op {
                                 Op2::Less => instrs
-                                    .push(Instr::ICmovl(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
+                                    .push(Instr::Cmovl(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
                                 Op2::LessEqual => instrs
-                                    .push(Instr::ICmovle(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
+                                    .push(Instr::Cmovle(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
                                 Op2::Greater => instrs
-                                    .push(Instr::ICmovg(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
+                                    .push(Instr::Cmovg(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
                                 Op2::GreaterEqual => instrs
-                                    .push(Instr::ICmovge(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
+                                    .push(Instr::Cmovge(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rbx))),
                                 _ => panic!("This should literally never happen"),
                             }; 
                         }
@@ -284,11 +284,11 @@ fn compile_expr(
             let mut instrs = compile_expr(cond, si, env, brake, l);
             // TODO: We might want to check that the result is a boolean
             // If result of cond is false, jump to else
-            instrs.push(Instr::ICmp(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())));
-            instrs.push(Instr::IJe(else_label.clone()));
+            instrs.push(Instr::Cmp(Arg::Reg(Reg::Rax), Arg::Imm(repr_false())));
+            instrs.push(Instr::Je(else_label.clone()));
             // We execute thn instructions and jump to end
             instrs.append(&mut compile_expr(thn, si, env, brake, l));
-            instrs.push(Instr::IJmp(end_label.clone()));
+            instrs.push(Instr::Jmp(end_label.clone()));
             // We define the else label, no need to jump after
             instrs.push(Instr::Label(else_label.clone()));
             instrs.append(&mut compile_expr(els, si, env, brake, l));
@@ -300,14 +300,14 @@ fn compile_expr(
             let end_label = new_label(l, "loopend");
             let mut instrs = vec![Instr::Label(start_label.clone())];
             instrs.append(&mut compile_expr(body, si, env, &end_label, l));
-            instrs.push(Instr::IJmp(start_label.clone()));
+            instrs.push(Instr::Jmp(start_label.clone()));
             instrs.push(Instr::Label(end_label.clone()));
             instrs
         }
         Expr::Break(e) => {
             if !brake.is_empty() {
                 let mut instrs = compile_expr(e, si, env, brake, l);
-                instrs.push(Instr::IJmp(brake.clone()));
+                instrs.push(Instr::Jmp(brake.clone()));
                 instrs
             } else {
                 panic!("break outside of loop: {:?}", e);
@@ -317,7 +317,7 @@ fn compile_expr(
             if env.contains_key(id) {
                 let id_offset = env.get(id).unwrap();
                 let mut instrs = compile_expr(e, si, env, brake, l);
-                instrs.push(Instr::IMov(
+                instrs.push(Instr::Mov(
                     Arg::Mem(maddr_bd(Reg::Rsp, -*id_offset)),
                     Arg::Reg(Reg::Rax),
                 ));
@@ -339,17 +339,17 @@ fn compile_expr(
             let stack_offset = index * 8;
             instrs.append(&mut vec![
                 // Save rdi before the call
-                Instr::IMov(Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)), Arg::Reg(Reg::Rdi)),
+                Instr::Mov(Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset)), Arg::Reg(Reg::Rdi)),
                 // Set the argument (rdi) to the value we want to print (rax)
-                Instr::IMov(Arg::Reg(Reg::Rdi), Arg::Reg(Reg::Rax)),
+                Instr::Mov(Arg::Reg(Reg::Rdi), Arg::Reg(Reg::Rax)),
                 // Move rsp to point to the top of the stack
-                Instr::ISub(Arg::Reg(Reg::Rsp), Arg::Imm(stack_offset)),
+                Instr::Sub(Arg::Reg(Reg::Rsp), Arg::Imm(stack_offset)),
                 // Finally, call the print function
-                Instr::ICall("snek_print".to_string()),
+                Instr::Call("snek_print".to_string()),
                 // Restore rsp
-                Instr::IAdd(Arg::Reg(Reg::Rsp), Arg::Imm(stack_offset)),
+                Instr::Add(Arg::Reg(Reg::Rsp), Arg::Imm(stack_offset)),
                 // and restore rdi
-                Instr::IMov(Arg::Reg(Reg::Rdi), Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset))),
+                Instr::Mov(Arg::Reg(Reg::Rdi), Arg::Mem(maddr_bd(Reg::Rsp, -stack_offset))),
             ]);
             instrs
         }
@@ -361,40 +361,40 @@ fn compile_expr(
                 // Compile each member of the tuple
                 instrs.append(&mut compile_expr(expr, current_si, env, brake, l));
                 // Save the result in the current stack index
-                instrs.push(Instr::IMov(
+                instrs.push(Instr::Mov(
                     // Arg::RegOffset(Reg::Rsp, -current_si * 8),
                     Arg::Mem(maddr_bd(Reg::Rsp, -current_si * 8)),
                     Arg::Reg(Reg::Rax),
                 ));
             }
             // Set rbs to the size of the tuple
-            instrs.push(Instr::IMov(Arg::Reg(Reg::Rbx), Arg::Imm((size << 1) as i64)));
+            instrs.push(Instr::Mov(Arg::Reg(Reg::Rbx), Arg::Imm((size << 1) as i64)));
             // Set r15 (next new heap location) to the size of the tuple
             // The size need not to be in the internal representation format (shifted)
             // however, this will make checking out of bounds easier
-            instrs.push(Instr::IMov(Arg::Mem(maddr_b(Reg::R15)), Arg::Reg(Reg::Rbx)));
+            instrs.push(Instr::Mov(Arg::Mem(maddr_b(Reg::R15)), Arg::Reg(Reg::Rbx)));
             // Move values from the stack to the heap
             for i in 0..size {
                 let current_si = si + i as i64;
                 // Since we cannot move memory to memory, we need to use rax
                 // Move the value from the stack to rax
-                instrs.push(Instr::IMov(
+                instrs.push(Instr::Mov(
                     Arg::Reg(Reg::Rax),
                     Arg::Mem(maddr_bd(Reg::Rsp, -current_si * 8)),
                 ));
                 // Move the value from rax to the heap
-                instrs.push(Instr::IMov(
+                instrs.push(Instr::Mov(
                     // Arg::RegOffset(Reg::R15, (i as i64 + 1) * 8),
                     Arg::Mem(maddr_bd(Reg::R15, (i as i64 + 1) * 8)),
                     Arg::Reg(Reg::Rax),
                 ));
             }
             // Get the address at r15 and save it in rax
-            instrs.push(Instr::IMov(Arg::Reg(Reg::Rax), Arg::Reg(Reg::R15)));
+            instrs.push(Instr::Mov(Arg::Reg(Reg::Rax), Arg::Reg(Reg::R15)));
             // Add 1 to rax, to represent a tuple
-            instrs.push(Instr::IAdd(Arg::Reg(Reg::Rax), Arg::Imm(1)));
+            instrs.push(Instr::Add(Arg::Reg(Reg::Rax), Arg::Imm(1)));
             // Add size + 1 of the tuple to r15, since we are also storing the size
-            instrs.push(Instr::IAdd(Arg::Reg(Reg::R15), Arg::Imm((size + 1) as i64 * 8)));
+            instrs.push(Instr::Add(Arg::Reg(Reg::R15), Arg::Imm((size + 1) as i64 * 8)));
             instrs
         }
         Expr::Index(e, idx) => {
@@ -403,7 +403,7 @@ fn compile_expr(
             // error if idx is not a number
             instrs.append(&mut error_rax_not_num());
             // save the result in the current stack index
-            instrs.push(Instr::IMov(
+            instrs.push(Instr::Mov(
                 Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
                 Arg::Reg(Reg::Rax),
             ));
@@ -412,19 +412,19 @@ fn compile_expr(
             // error if the value is not a tuple
             instrs.append(&mut error_rax_not_tuple());
             // get the actual address by subtracting 1 from rax
-            instrs.push(Instr::ISub(Arg::Reg(Reg::Rax), Arg::Imm(1)));
+            instrs.push(Instr::Sub(Arg::Reg(Reg::Rax), Arg::Imm(1)));
             // TODO: check if the index is out of bounds
             // get the index to rbx
-            instrs.push(Instr::IMov(
+            instrs.push(Instr::Mov(
                 Arg::Reg(Reg::Rbx),
                 Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
             ));
             // get the correct index by shifting it to the right and adding 1
-            instrs.push(Instr::ISar(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
-            instrs.push(Instr::IAdd(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
+            instrs.push(Instr::Sar(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
+            instrs.push(Instr::Add(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
             // use this index to index the tuple in the heap
             // instrs.push(Instr::IMov(Arg::Reg(Reg::Rax), Arg::RegAddressing(Reg::Rax, Reg::Rbx, 8)));
-            instrs.push(Instr::IMov(
+            instrs.push(Instr::Mov(
                 Arg::Reg(Reg::Rax),
                 Arg::Mem(maddr_bisd(Reg::Rax, Reg::Rbx, 8, 0)),
             ));
@@ -443,24 +443,24 @@ fn compile_expr(
                 // compile using an index that is always safe
                 instrs.append(&mut compile_expr(arg, new_rsp_offset + 1, env, brake, l));
                 // start populating the args from the new rsp offset up
-                instrs.push(Instr::IMov(
+                instrs.push(Instr::Mov(
                     Arg::Mem(maddr_bd(Reg::Rsp, (i as i64 - new_rsp_offset) * 8)),
                     Arg::Reg(Reg::Rax),
                 ));
             };
             // Save rdi to the actual stack index
-            instrs.push(Instr::IMov(
+            instrs.push(Instr::Mov(
                 Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
                 Arg::Reg(Reg::Rdi),
             ));
             // Move rsp to point to the top of the stack
-            instrs.push(Instr::ISub(Arg::Reg(Reg::Rsp), Arg::Imm(new_rsp_offset * 8)));
+            instrs.push(Instr::Sub(Arg::Reg(Reg::Rsp), Arg::Imm(new_rsp_offset * 8)));
             // Finally, call the function
-            instrs.push(Instr::ICall(fname.clone()));
+            instrs.push(Instr::Call(fname.clone()));
             // Restore rsp
-            instrs.push(Instr::IAdd(Arg::Reg(Reg::Rsp), Arg::Imm(new_rsp_offset * 8)));
+            instrs.push(Instr::Add(Arg::Reg(Reg::Rsp), Arg::Imm(new_rsp_offset * 8)));
             // and restore rdi
-            instrs.push(Instr::IMov(
+            instrs.push(Instr::Mov(
                 Arg::Reg(Reg::Rdi),
                 Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
             ));
@@ -482,7 +482,7 @@ fn compile_fundef(def: &FunDef, labels: &mut i64) -> Vec<Instr> {
     let mut body_instrs = compile_expr(&def.body, 2, &body_env, &String::new(), labels);
     let mut instrs = vec![Instr::Label(def.name.clone())];
     instrs.append(&mut body_instrs);
-    instrs.push(Instr::IRet);
+    instrs.push(Instr::Ret);
     instrs
 }
 
