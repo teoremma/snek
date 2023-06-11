@@ -1,0 +1,7 @@
+(let ((a 0) (b 1) (n input))
+  (loop 
+    (if (= n 1) 
+        (break b)
+        (block (set! n (- n 1))
+               (set! b (+ a b))
+               (set! a (- b a))))))
