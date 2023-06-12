@@ -97,8 +97,8 @@ fn compile_expr(
         }
         Expr::Boolean(true) => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_true()))],
         Expr::Boolean(false) => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Imm(repr_false()))],
-        Expr::Id(id) if id == "input" => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rdi))],
-        Expr::Id(id) => {
+        Expr::Var(id) if id == "input" => vec![Instr::Mov(Arg::Reg(Reg::Rax), Arg::Reg(Reg::Rdi))],
+        Expr::Var(id) => {
             if env.contains_key(id) {
                 vec![Instr::Mov(
                     Arg::Reg(Reg::Rax),

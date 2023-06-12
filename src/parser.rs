@@ -64,10 +64,10 @@ fn parse_expr(s: &Sexp) -> Expr {
         Sexp::Atom(S(s)) if s == "true" => Expr::Boolean(true),
         Sexp::Atom(S(s)) if s == "false" => Expr::Boolean(false),
         // TODO: We want to panic if we see "input" in a function definition
-        Sexp::Atom(S(s)) if s == "input" => Expr::Id(s.to_string()),
+        Sexp::Atom(S(s)) if s == "input" => Expr::Var(s.to_string()),
         Sexp::Atom(S(s)) => {
             if is_valid_id(s) {
-                Expr::Id(s.to_string())
+                Expr::Var(s.to_string())
             } else {
                 panic!("Invalid identifier or keyword: {}", s)
             }
