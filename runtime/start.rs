@@ -1,4 +1,10 @@
-use std::env;
+use std::{collections::HashSet, env};
+
+type SnekVal = i64;
+
+const TRUE: SnekVal = 7;
+const FALSE: SnekVal = 3;
+const NIL: SnekVal = 1;
 
 #[link(name = "our_code")]
 extern "C" {
@@ -27,12 +33,33 @@ pub extern "C" fn snek_error(errcode: i64) {
 #[no_mangle]
 #[export_name = "\x01snek_print"]
 // TODO: might need to return an u64 for some reason
-fn snek_print(val: i64) -> i64 {
-    if val % 2 == 0 { println!("{}", (val as i64) >> 1)}
-    else if val == 3 { println!("false") }
-    else if val == 7 { println!("true") }
-    else { println!("Unknown value: {}", val) }
+pub unsafe extern "C" fn snek_print(val: i64) -> i64 {
+    println!("{}", snek_str(val, &mut HashSet::new()));
     return val;
+}
+
+#[no_mangle]
+#[export_name = "\x01snek_str"]
+unsafe fn snek_str(val: i64, seen: &mut HashSet<i64>) -> String {
+    if val & 1 == 0 { format!("{}", val >> 1)}
+    else if val == FALSE { format!("false") }
+    else if val == TRUE { format!("true") }
+    else if val == NIL { format!("nil") }
+    else if seen.contains(&val) { format!("(...)") }
+    else if val & 1 == 1 {
+        seen.insert(val);
+        let mut addr = (val - 1) as *mut u64;
+        let size = (addr.read() as usize) >> 1;
+        let mut res = format!("(");
+        for i in 0..size {
+            let elem = addr.add(i + 1).read() as i64;
+            res = format!("{}{}", res, snek_str(elem, seen));
+            if i < size - 1 { res = format!("{}, ", res); }
+        }
+        seen.remove(&val);
+        format!("{})", res)
+    } 
+    else { format!("unexpected value: {}", val) }
 }
 
 fn parse_input(input: &str) -> u64 {
@@ -55,5 +82,5 @@ fn main() {
     let buffer: *mut u64 = memory.as_mut_ptr();
 
     let i: u64 = unsafe { our_code_starts_here(input, buffer) };
-    snek_print(i as i64);
+    unsafe { snek_print(i as i64) };
 }

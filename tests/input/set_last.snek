@@ -13,6 +13,6 @@
 (let ((t (tup 1 2 3)))
   (block
     (tup_set_last t 4)
-    (tup_get_last t 3)
+    t
   )
 )

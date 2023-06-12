@@ -35,13 +35,23 @@ success_tests! {
     {
         name: set_last,
         file: "input/set_last.snek",
-        expected: "4",
+        expected: "(1, 2, 4)",
     },
     {
         name: iterate,
         file: "input/iterate.snek",
         expected: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n100",
-    }
+    },
+    {
+        name: print_tuple_simple,
+        file: "input/print_tuple_simple.snek",
+        expected: "(1, 2, 3)",
+    },
+    {
+        name: print_tuple_cycle,
+        file: "input/print_tuple_cycle.snek",
+        expected: "(1, (2, (...)))",
+    },
 }
 
 runtime_error_tests! {

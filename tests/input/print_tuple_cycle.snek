@@ -1,0 +1,11 @@
+(let 
+    (
+        (t1 (tup 1 1))
+        (t2 (tup 2 2))
+    )
+    (block
+        (tup-set! t1 1 t2)
+        (tup-set! t2 1 t1)
+        t1
+    )
+)
