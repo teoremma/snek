@@ -1,6 +1,7 @@
 // types
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+// x86 registers
 pub enum Reg {
     Rax,
     Rbx,
@@ -13,8 +14,10 @@ pub enum Reg {
     R15,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+// Memory address
 pub enum MemAddr {
+    // [base + index * scale + disp]
     MemAddr {
         base: Reg, 
         index: Option<Reg>,
@@ -23,37 +26,57 @@ pub enum MemAddr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+// An argument to an instruction is either a register, an immediate value, or a value in memory
 pub enum Arg {
     Reg(Reg),
     Imm(i64),
     Mem(MemAddr),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Instr {
+    // a_label:
     Label(String),
-    Mov(Arg, Arg),
-    Add(Arg, Arg),
-    Sub(Arg, Arg),
-    Imul(Arg, Arg),
-    Sar(Arg, Arg),
-    And(Arg, Arg),
-    Xor(Arg, Arg),
-    Or(Arg, Arg),
-    Cmp(Arg, Arg),
-    Test(Arg, Arg),
-    Jmp(String),
-    Je(String),
-    Jne(String),
-    Jo(String),
-    Cmove(Arg, Arg),
-    Cmovl(Arg, Arg),
-    Cmovle(Arg, Arg),
-    Cmovg(Arg, Arg),
-    Cmovge(Arg, Arg),
-    Call(String),
-    Ret,
+
+    // Moves 
+    Mov(Arg, Arg), // dst <- src
+
+    // Arithmetic operations
+
+    // // Binary operations
+    Add(Arg, Arg), // dst += src
+    Sub(Arg, Arg), // dst -= src 
+    Imul(Arg, Arg), // dst *= src
+
+    // // Shifts
+    Sar(Arg, Arg), // dst >>= src, arithmetic
+
+    // // Logic operations
+    And(Arg, Arg), // dst &= src
+    Or(Arg, Arg), // dst |= src
+    Xor(Arg, Arg), // dst ^= src
+    
+    // Comparisons
+    Cmp(Arg, Arg), // dst - src, sets flags
+    Test(Arg, Arg), // dst & src, sets flags
+
+    // Jumps
+    Jmp(String), // unconditional jump
+    Je(String), // jump if ==
+    Jne(String), // jump if !=
+    Jo(String), // jump if overflow
+
+    // Conditional moves
+    Cmove(Arg, Arg), // dst <- src if ==
+    Cmovl(Arg, Arg), // dst <- src if <
+    Cmovle(Arg, Arg), // dst <- src if <=
+    Cmovg(Arg, Arg), // dst <- src if >
+    Cmovge(Arg, Arg), // dst <- src if >=
+    
+    // Function call related
+    Call(String), // push return address, jump to label
+    Ret, // pop return address, jump to it
 }
 
 // impls
