@@ -447,7 +447,7 @@ fn compile_expr(
                 Arg::Reg(Reg::Rax),
             ));
             // evaluate the tuple
-            instrs.append(&mut compile_expr(t, si + 1, env, brake, l));
+            instrs.append(&mut compile_expr(t, si + 2, env, brake, l));
             // error if the value is not a tuple
             instrs.append(&mut error_rax_not_tuple());
             // get the actual address by subtracting 1 from rax
@@ -471,6 +471,8 @@ fn compile_expr(
                 Arg::Mem(maddr_bisd(Reg::Rax, Reg::Rbx, 8, 0)),
                 Arg::Reg(Reg::Rcx),
             ));
+            // add 1 to rax to return the representation of a tuple
+            instrs.push(Instr::Add(Arg::Reg(Reg::Rax), Arg::Imm(1)));
             instrs
         }
         Expr::TupLen(t) => {
