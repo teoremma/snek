@@ -50,6 +50,7 @@ pub enum Instr {
     Imul(Arg, Arg), // dst *= src
 
     // // Shifts
+    Shl(Arg, Arg), // dst <<= src
     Sar(Arg, Arg), // dst >>= src, arithmetic
 
     // // Logic operations
@@ -139,6 +140,7 @@ fn instr_to_string(i: &Instr) -> String {
         Instr::Imul(v1, v2) => format!("imul {}, {}", arg_to_string(v1), arg_to_string(v2)),
         Instr::Test(v1, v2) => format!("test {}, {}", arg_to_string(v1), arg_to_string(v2)),
         Instr::Cmove(v1, v2) => format!("cmove {}, {}", arg_to_string(v1), arg_to_string(v2)),
+        Instr::Shl(v1, v2) => format!("shl {}, {}", arg_to_string(v1), arg_to_string(v2)),
         Instr::Sar(v1, v2) => format!("sar {}, {}", arg_to_string(v1), arg_to_string(v2)),
         Instr::Xor(v1, v2) => format!("xor {}, {}", arg_to_string(v1), arg_to_string(v2)),
         Instr::And(v1, v2) => format!("and {}, {}", arg_to_string(v1), arg_to_string(v2)),

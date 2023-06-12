@@ -423,10 +423,67 @@ fn compile_expr(
             instrs.push(Instr::Sar(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
             instrs.push(Instr::Add(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
             // use this index to index the tuple in the heap
-            // instrs.push(Instr::IMov(Arg::Reg(Reg::Rax), Arg::RegAddressing(Reg::Rax, Reg::Rbx, 8)));
             instrs.push(Instr::Mov(
                 Arg::Reg(Reg::Rax),
                 Arg::Mem(maddr_bisd(Reg::Rax, Reg::Rbx, 8, 0)),
+            ));
+            instrs
+        }
+        Expr::TupSet(t, i, e) => {
+            // first evaluate the index
+            let mut instrs = compile_expr(i, si, env, brake, l);
+            // error if idx is not a number
+            instrs.append(&mut error_rax_not_num());
+            // save the result in the current stack index
+            instrs.push(Instr::Mov(
+                Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
+                Arg::Reg(Reg::Rax),
+            ));
+            // evaluate e
+            instrs.append(&mut compile_expr(e, si + 1, env, brake, l));
+            // save the result in the current stack index
+            instrs.push(Instr::Mov(
+                Arg::Mem(maddr_bd(Reg::Rsp, -(si + 1) * 8)),
+                Arg::Reg(Reg::Rax),
+            ));
+            // evaluate the tuple
+            instrs.append(&mut compile_expr(t, si + 1, env, brake, l));
+            // error if the value is not a tuple
+            instrs.append(&mut error_rax_not_tuple());
+            // get the actual address by subtracting 1 from rax
+            instrs.push(Instr::Sub(Arg::Reg(Reg::Rax), Arg::Imm(1)));
+            // TODO: check if the index is out of bounds
+            // get idx to rbx
+            instrs.push(Instr::Mov(
+                Arg::Reg(Reg::Rbx),
+                Arg::Mem(maddr_bd(Reg::Rsp, -si * 8)),
+            ));
+            // get the correct index by shifting it to the right and adding 1
+            instrs.push(Instr::Sar(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
+            instrs.push(Instr::Add(Arg::Reg(Reg::Rbx), Arg::Imm(1)));
+            // get e to rcx
+            instrs.push(Instr::Mov(
+                Arg::Reg(Reg::Rcx),
+                Arg::Mem(maddr_bd(Reg::Rsp, -(si + 1) * 8)),
+            ));
+            // move the value of e to rax + 8 * rbx
+            instrs.push(Instr::Mov(
+                Arg::Mem(maddr_bisd(Reg::Rax, Reg::Rbx, 8, 0)),
+                Arg::Reg(Reg::Rcx),
+            ));
+            instrs
+        }
+        Expr::TupLen(t) => {
+            // evaluate the tuple
+            let mut instrs = compile_expr(t, si, env, brake, l);
+            // error if the value is not a tuple
+            instrs.append(&mut error_rax_not_tuple());
+            // get the actual address by subtracting 1 from rax
+            instrs.push(Instr::Sub(Arg::Reg(Reg::Rax), Arg::Imm(1)));
+            // the size of the tuple is stored exactly at the address of the tuple
+            instrs.push(Instr::Mov(
+                Arg::Reg(Reg::Rax),
+                Arg::Mem(maddr_b(Reg::Rax)),
             ));
             instrs
         }

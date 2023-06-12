@@ -156,8 +156,14 @@ fn parse_expr(s: &Sexp) -> Expr {
             [Sexp::Atom(S(op)), exprs @ ..] if op == "tup" => {
                 Expr::Tup(exprs.into_iter().map(parse_expr).collect())
             }
-            [Sexp::Atom(S(op)), e1, e2] if op == "tup-get" => {
-                Expr::TupGet(Box::new(parse_expr(e1)), Box::new(parse_expr(e2)))
+            [Sexp::Atom(S(op)), t, i] if op == "tup-get" => {
+                Expr::TupGet(Box::new(parse_expr(t)), Box::new(parse_expr(i)))
+            }
+            [Sexp::Atom(S(op)), t, i, e] if op == "tup-set!" => {
+                Expr::TupSet(Box::new(parse_expr(t)), Box::new(parse_expr(i)), Box::new(parse_expr(e)))
+            }
+            [Sexp::Atom(S(op)), t] if op == "tup-len" => {
+                Expr::TupLen(Box::new(parse_expr(t)))
             }
             // Function calls must be the last case since funname will capture anything
             [Sexp::Atom(S(funname)), args @ ..] => {

@@ -37,6 +37,11 @@ success_tests! {
         file: "input/set_last.snek",
         expected: "4",
     },
+    {
+        name: iterate,
+        file: "input/iterate.snek",
+        expected: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n100",
+    }
 }
 
 runtime_error_tests! {
