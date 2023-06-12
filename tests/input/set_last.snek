@@ -4,11 +4,15 @@
     (tup-set! t (- l 1) e)
   )
 )
+(fun
+  (tup_get_last t)
+  (let ((l (tup-len t)))
+    (tup-get t (- l 1))
+  )
+)
 (let ((t (tup 1 2 3)))
   (block
-    (print t)
     (tup_set_last t 4)
-    (print t)
-    (tup-get t 3)
+    (tup_get_last t 3)
   )
 )

@@ -32,6 +32,11 @@ success_tests! {
         input: "3",
         expected: "33\n66\n0",
     },
+    {
+        name: set_last,
+        file: "input/set_last.snek",
+        expected: "4",
+    },
 }
 
 runtime_error_tests! {
