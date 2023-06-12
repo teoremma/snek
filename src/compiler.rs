@@ -496,20 +496,12 @@ fn compile_program(p: &Program) -> (Vec<Instr>, Vec<Instr>) {
     (defs, main)
 }
 
-fn instrs_to_asm(instrs: Vec<Instr>) -> String {
-    instrs
-        .iter()
-        .map(|i| instr_to_string(i))
-        .collect::<Vec<String>>()
-        .join("\n")
-}
-
 pub fn compile(p: &Program) -> String {
-    let prelude = instrs_to_asm(error_handler());
+    let prelude = instrs_to_string(error_handler());
 
     let (defs_instrs, main_instrs) = compile_program(&p);
-    let defs_asm = instrs_to_asm(defs_instrs);
-    let main_asm = instrs_to_asm(main_instrs);
+    let defs_asm = instrs_to_string(defs_instrs);
+    let main_asm = instrs_to_string(main_instrs);
 
     let asm_program = format!(
         "

@@ -130,7 +130,7 @@ fn arg_to_string(v: &Arg) -> String {
     }
 }
 
-pub fn instr_to_string(i: &Instr) -> String {
+fn instr_to_string(i: &Instr) -> String {
     match i {
         Instr::Label(l) => format!("{}:", l),
         Instr::Mov(v1, v2) => format!("mov {}, {}", arg_to_string(v1), arg_to_string(v2)),
@@ -155,4 +155,12 @@ pub fn instr_to_string(i: &Instr) -> String {
         Instr::Call(v) => format!("call {}", v),
         Instr::Ret => "ret".to_string(),
     }
+}
+
+pub fn instrs_to_string(instrs: Vec<Instr>) -> String {
+    instrs
+        .iter()
+        .map(|i| instr_to_string(i))
+        .collect::<Vec<String>>()
+        .join("\n")
 }
