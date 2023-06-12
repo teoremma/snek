@@ -1,0 +1,14 @@
+(fun
+  (tup_set_last t e)
+  (let ((l (tup-len t)))
+    (tup-set! t (- l 1) e)
+  )
+)
+(let ((t (tup 1 2 3)))
+  (block
+    (print t)
+    (tup_set_last t 4)
+    (print t)
+    (tup-get t 3)
+  )
+)
