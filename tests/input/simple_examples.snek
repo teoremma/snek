@@ -1,2 +1,2 @@
-(let ((t (tuple 1 10 100)))
-  (index t input))
+(let ((t (tup 1 10 100)))
+  (tup-get t input))

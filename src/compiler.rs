@@ -353,7 +353,7 @@ fn compile_expr(
             ]);
             instrs
         }
-        Expr::Tuple(es) => {
+        Expr::Tup(es) => {
             let size = es.len();
             let mut instrs = vec![];
             for (i, expr) in es.into_iter().enumerate() {
@@ -397,7 +397,7 @@ fn compile_expr(
             instrs.push(Instr::Add(Arg::Reg(Reg::R15), Arg::Imm((size + 1) as i64 * 8)));
             instrs
         }
-        Expr::Index(e, idx) => {
+        Expr::TupGet(e, idx) => {
             // first evaluate the index
             let mut instrs = compile_expr(idx, si, env, brake, l);
             // error if idx is not a number
@@ -430,7 +430,7 @@ fn compile_expr(
             ));
             instrs
         }
-        Expr::FunCall(fname, args) => {
+        Expr::Call(fname, args) => {
             // TODO: Check that the function exists and has the right arity
             let n_args = args.len();
             // After setting up the call, rsp will move by 8 * n_args

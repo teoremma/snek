@@ -5,7 +5,7 @@ use sexp::*;
 use crate::syntax::*;
 
 const RESERVED_WORDS: &[&str] = &[
-    "true", "false", "input", "let", "set!", "if", "block", "loop", "break", "print", "fun", "tuple", "index",
+    "true", "false", "input", "let", "set!", "if", "block", "loop", "break", "print", "fun", "tup", "idx",
     // unary operators
     "add1", "sub1", "isnum", "isbool", 
     // binary operators
@@ -153,16 +153,16 @@ fn parse_expr(s: &Sexp) -> Expr {
                 Expr::Print(Box::new(parse_expr(e)))
             }
             // We allow tuples to have 0 elements
-            [Sexp::Atom(S(op)), exprs @ ..] if op == "tuple" => {
-                Expr::Tuple(exprs.into_iter().map(parse_expr).collect())
+            [Sexp::Atom(S(op)), exprs @ ..] if op == "tup" => {
+                Expr::Tup(exprs.into_iter().map(parse_expr).collect())
             }
-            [Sexp::Atom(S(op)), e1, e2] if op == "index" => {
-                Expr::Index(Box::new(parse_expr(e1)), Box::new(parse_expr(e2)))
+            [Sexp::Atom(S(op)), e1, e2] if op == "tup-get" => {
+                Expr::TupGet(Box::new(parse_expr(e1)), Box::new(parse_expr(e2)))
             }
             // Function calls must be the last case since funname will capture anything
             [Sexp::Atom(S(funname)), args @ ..] => {
                 if is_valid_id(funname) {
-                    Expr::FunCall(funname.to_string(), args.into_iter().map(parse_expr).collect())
+                    Expr::Call(funname.to_string(), args.into_iter().map(parse_expr).collect())
                 } else {
                     panic!("Invalid function name in call: {}", funname)
                 }

@@ -70,18 +70,26 @@ pub enum Expr {
     // Evaluates e, prints then returns the result
     Print(Box<Expr>),
 
-    // (tuple <e> *)
+    // (tup <e> *)
     // Heap allocated tuple of values, fixed size
     // Arity can be 0
-    Tuple(Vec<Expr>),
+    Tup(Vec<Expr>),
 
-    // (index <e> <i>)
+    // (tup-get <t> <i>)
     // Indexes into a tuple
-    Index(Box<Expr>, Box<Expr>),
+    TupGet(Box<Expr>, Box<Expr>),
+
+    // (tup-set <t> <i> <e>)
+    // Sets the value at index i in tuple t to e
+    TupSet(Box<Expr>, Box<Expr>, Box<Expr>),
+
+    // (tup-len <t>)
+    // Returns the length of a tuple
+    TupLen(Box<Expr>),
 
     // (<f> <e> *)
     // Calls f with the values of e_i as parameters
-    FunCall(String, Vec<Expr>),
+    Call(String, Vec<Expr>),
 }
 
 #[derive(Debug)]
